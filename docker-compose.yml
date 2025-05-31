@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - EMAIL_ID=${EMAIL_ID}
+      - EMAIL_PASS=${EMAIL_PASS}
+    volumes:
+      - ./backend/certificates:/usr/src/app/certificates
+      - ./backend/uploads:/usr/src/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
