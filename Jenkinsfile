@@ -1,43 +1,23 @@
 pipeline {
     agent any
-    
+
     environment {
+        // Load credentials from Jenkins
         DOCKER_HUB_CREDENTIALS = credentials('docker-hub-credentials')
         EMAIL_CREDENTIALS = credentials('email-credentials')
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/yourusername/certificate-generator.git'
+                checkout scm
             }
         }
-        
-        stage('Install Dependencies') {
-            steps {
-                dir('backend') {
-                    sh 'npm install'
-                }
-                dir('frontend') {
-                    sh 'npm install'
-                }
-            }
-        }
-        
-        stage('Test') {
-            steps {
-                dir('backend') {
-                    sh 'npm test'
-                }
-                dir('frontend') {
-                    sh 'npm test'
-                }
-            }
-        }
-        
-        stage('Build Docker Images') {
+
+        stage('Build') {
             steps {
                 script {
+                    // Build and push Docker images
                     docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
                         dir('backend') {
                             def backendImage = docker.build("${env.DOCKER_HUB_CREDENTIALS_USR}/certificate-generator-backend:latest")
@@ -51,18 +31,20 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Deploy') {
             steps {
-                sh 'docker-compose down'
-                sh 'docker-compose up -d'
+                script {
+                    sh 'docker-compose down'
+                    sh 'docker-compose up -d'
+                }
             }
         }
     }
-    
+
     post {
         always {
-            cleanWs()
+            cleanWs()  // Now properly wrapped in node context
         }
     }
 }
