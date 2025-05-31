@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+    
+    - name: Install dependencies
+      run: |
+        cd backend && npm install
+        cd ../frontend && npm install
+    
+    - name: Run backend tests
+      working-directory: ./backend
+      run: npm test
+      env:
+        EMAIL_ID: ${{ secrets.EMAIL_ID }}
+        EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+    
+    - name: Run frontend tests
+      working-directory: ./frontend
+      run: npm test
+    
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKER_HUB_USERNAME }}
+        password: ${{ secrets.DOCKER_HUB_TOKEN }}
+    
+    - name: Build and push backend
+      working-directory: ./backend
+      run: |
+        docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/certificate-generator-backend:latest .
+        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/certificate-generator-backend:latest
+    
+    - name: Build and push frontend
+      working-directory: ./frontend
+      run: |
+        docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/certificate-generator-frontend:latest .
+        docker push ${{ secrets.DOCKER_HUB_USERNAME }}/certificate-generator-frontend:latest

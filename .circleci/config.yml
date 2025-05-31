@@ -1,0 +1,55 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/node:16.14
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            cd backend && npm install
+            cd ../frontend && npm install
+      - run:
+          name: Run backend tests
+          working_directory: backend
+          command: npm test
+      - run:
+          name: Run frontend tests
+          working_directory: frontend
+          command: npm test
+
+  deploy:
+    docker:
+      - image: cimg/node:16.14
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Login to Docker Hub
+          command: docker login -u $DOCKER_HUB_USERNAME -p $DOCKER_HUB_TOKEN
+      - run:
+          name: Build and push backend
+          working_directory: backend
+          command: |
+            docker build -t $DOCKER_HUB_USERNAME/certificate-generator-backend:latest .
+            docker push $DOCKER_HUB_USERNAME/certificate-generator-backend:latest
+      - run:
+          name: Build and push frontend
+          working_directory: frontend
+          command: |
+            docker build -t $DOCKER_HUB_USERNAME/certificate-generator-frontend:latest .
+            docker push $DOCKER_HUB_USERNAME/certificate-generator-frontend:latest
+
+workflows:
+  version: 2
+  test-and-deploy:
+    jobs:
+      - test
+      - deploy:
+          requires:
+            - test
+          filters:
+            branches:
+              only: main
